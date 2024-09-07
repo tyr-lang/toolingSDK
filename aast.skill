@@ -1,0 +1,1176 @@
+#    ____  _____________                                                        
+#   / __ \/ ___/ __/ __/  Your OGSS/SKilL Binding                               
+#  / /_/ / (_\_\ \_\ \    generated: 07.09.2024                                 
+#  \____/\___/___/___/    by: feldentm                                          
+#                                                                               
+
+enum Kind {
+  Typ,
+  Cls,
+  Obj;
+}
+
+enum Storage {
+  Var,
+  Val,
+  Let;
+}
+
+/**
+ * Severity of a message. Only messages that would also be shown are preseent
+ * here.
+ */
+enum Severity {
+  Info,
+  Warning,
+  Error;
+}
+
+enum Variance {
+  Co,
+  Contra,
+  In;
+}
+
+enum FunctionTypeKind {
+  Def,
+  Typ,
+  Cls;
+}
+
+
+/**
+ * Unifies file properties.
+ * @author  Timm Felden
+ */
+File {
+  string name;
+
+  
+  /**
+   * null iff package root directory
+   */
+  File parent;
+}
+
+
+/**
+ * The base class of all AST nodes.
+ */
+Node {
+  
+  /**
+   * Parents can be accessed for all nodes but the global root. The other
+   * direction is not created automatically, as neither benefit nor order are
+   * obvious.
+   */
+  Node parent;
+
+  
+  /**
+   * Not null iff the node has a defined position. As this is a global AST,
+   * there will be some nodes without position. Also, an annotated AST may point
+   * to extern objects who will also not have positions.
+   * @note  Template instances will inherit their position from their
+   * definition.
+   */
+  Position pos;
+}
+
+
+/**
+ * Files can hold imports that are visible for the type definitions in the file
+ * only. Although files are types as scopes, their name is set to null to avoid
+ * creation of wrong packages.
+ */
+FileNode extends Node with ScopeMember {
+  
+  /**
+   * Namespaces contain scopes only
+   */
+  TopLevelNode[] defs;
+
+  
+  /**
+   * Imports visible in this file.
+   */
+  ImportExpression[] imports;
+}
+
+
+/**
+ * An entity defined in another library for the sake of creating links only.
+ * @note  name for such entities is a canonical name relative to package. Thus,
+ * "$package/$name" results in a reportable entity name.
+ */
+ExtEntity extends Node with NamedMember {
+  
+  /**
+   * the package name creating this entity
+   */
+  string package;
+}
+
+
+/**
+ * Namespaces are implicit in Tyr and may be caused by subdirectories or by a
+ * definition in the package specification file.
+ */
+Namespace extends Node with NamedMember with Scope {
+  
+  /**
+   * Child namespecase.
+   */
+  auto map<string, Namespace> subspace;
+}
+
+
+/**
+ * A parameter in a call. A placement operator can be used to assign the value
+ * to a specific formal parameter.
+ */
+Parameter extends Node {
+  
+  /**
+   * null iff no placement has been used
+   */
+  string name;
+}
+
+BlankParameter extends Parameter {
+}
+
+ValueParameter extends Parameter {
+  Expression value;
+}
+
+
+/**
+ * The base class of all AST nodes.
+ * @note  the parent is the documentable node
+ */
+DocComment extends Node {
+  
+  /**
+   * A list of detailed descriptions. The first serves as overview.
+   */
+  DocParagraph[] details;
+
+  
+  /**
+   * A list of tags
+   */
+  DocTag[] tags;
+}
+
+
+/**
+ * Expressions can be evaluated to yield a value.
+ */
+Expression extends Node {
+  
+  /**
+   * The expected type of this expression.
+   */
+  Expression ET;
+
+  
+  /**
+   * if an expression is a use of a named member, it is linked here
+   */
+  NamedMember definition;
+
+  
+  /**
+   * the human-readable version of the type
+   */
+  string prettyType;
+}
+
+Block extends Expression {
+  Expression[] statements;
+}
+
+Literal extends Expression {
+}
+
+
+/**
+ *
+ * @note  literals will not be unified in the AST
+ */
+IntLiteral extends Literal {
+  
+  /**
+   * the long representation of the value
+   */
+  i64 value;
+
+  
+  /**
+   * the representation of the literal as found in the source
+   */
+  string image;
+
+  
+  /**
+   * true if IntegerLiteral else UnsignedLiteral
+   */
+  bool signed;
+
+  
+  /**
+   * the size of the literal type in bits
+   */
+  i32 size;
+}
+
+BoolLiteral extends Literal {
+  bool value;
+}
+
+CharLiteral extends Literal {
+  
+  /**
+   * 21bit unicode codepoint
+   */
+  v64 value;
+}
+
+NullLiteral extends Literal {
+}
+
+FloatLiteral extends Literal {
+  
+  /**
+   * the double representation of the value
+   */
+  f64 value;
+
+  string image;
+
+  i32 size;
+}
+
+StringLiteral extends Literal {
+  string value;
+}
+
+
+/**
+ *
+ * @note  There is no way to identify parameters of an instantiation with a
+ * parser. However, the AST build can perform a context-sensitive look into
+ * target to extract up to two CT arguments and a runtime argument. The first
+ * application is taken and subsequent applications are only taken if they can
+ * be fit into this object.
+ */
+Allocation extends Expression {
+  
+  /**
+   * the expression yielding the type to be instantiated
+   */
+  Expression target;
+
+  
+  /**
+   * first CT args
+   */
+  Parameter[] first;
+
+  
+  /**
+   * second CT args
+   */
+  Parameter[] second;
+
+  
+  /**
+   * RT args
+   */
+  Parameter[] args;
+}
+
+
+/**
+ * definition of a variable in a block
+ */
+VariableDef extends Expression {
+  Storage storage;
+
+  string name;
+
+  Expression typ;
+
+  Expression init;
+}
+
+
+/**
+ * delete target
+ */
+Deallocation extends Expression {
+  Expression[] target;
+}
+
+
+/**
+ * A literal function type
+ * @note  either ctParams or rtParams is not null
+ * @note  name can be null for parameters from both parameter lists
+ * @note  value is interpreted as type for parameters from both parameter lists
+ */
+FunctionType extends Expression {
+  FunctionTypeKind kind;
+
+  
+  /**
+   * note: null if not present
+   */
+  Parameter[] ctParams;
+
+  
+  /**
+   * note: null if not present and ctParams is not null
+   */
+  Parameter[] rtParams;
+
+  
+  /**
+   * the result type
+   */
+  Expression result;
+}
+
+MemberAccess extends Expression {
+  Expression target;
+
+  string name;
+}
+
+StaticAccess extends Expression {
+  string name;
+}
+
+CTApplication extends Expression {
+  Expression target;
+
+  Parameter[] params;
+}
+
+
+/**
+ * usage of an operator in an operator application
+ */
+OperatorUsage extends Expression {
+  
+  /**
+   * the name of the operator, e.g. +
+   */
+  string name;
+}
+
+RTApplication extends Expression {
+  Expression target;
+
+  Parameter[] params;
+}
+
+
+/**
+ * Import a path into the current scope.
+ */
+ImportExpression extends Expression {
+  
+  /**
+   * The name under which the result shall be visible. If none is provided, the
+   * target must be a MemberAccess whose name will be used instead.
+   */
+  string name;
+
+  
+  /**
+   * An expression resulting in a top-level definition.
+   */
+  Expression target;
+}
+
+StaticTypeAccess extends Expression {
+  Expression target;
+}
+
+BinderApplication extends Expression {
+  Expression target;
+
+  VariableDef[] locals;
+
+  Expression[] blocks;
+}
+
+DynamicTypeAccess extends Expression {
+  Expression target;
+}
+
+BranchingExpression extends Expression {
+}
+
+
+/**
+ * The parent class of everything that can hold a switch case.
+ */
+SwitchLike extends BranchingExpression {
+  
+  /**
+   * the name the guard's value is bound to
+   * @note  null if not bound
+   * @note  for catch, this is never null as it is the name of the exception
+   */
+  string guardName;
+}
+
+
+/**
+ * A try-catch block as known from most other languages. In contrast to other
+ * languages, the declaration order of handlers is irrelevant.
+ */
+TryExpression extends SwitchLike {
+  
+  /**
+   * the sloc of the catch token
+   */
+  Position catchPos;
+
+  
+  /**
+   * the sloc of the finally token
+   */
+  Position finallyPos;
+
+  
+  /**
+   * the expression guarded by the try block
+   */
+  Expression body;
+
+  
+  /**
+   *
+   * @note  the case labels act as exception types
+   * @note  empty is not allowed but heimdahl will parse them anyway
+   */
+  SwitchCase[] cases;
+
+  
+  /**
+   *
+   * @note  null not allowed but heimdahl will parse them anyway
+   */
+  Expression others;
+
+  
+  /**
+   * An optional expression executed after all other effects
+   */
+  Expression finally;
+}
+
+
+/**
+ * Represents all forms of switch expressions
+ */
+SwitchExpression extends SwitchLike {
+  
+  /**
+   * The kind specified in the code. It is legal for obj to be implicitly a
+   * switch class.
+   */
+  Kind kind;
+
+  Expression guard;
+
+  
+  /**
+   *
+   * @note  empty is not allowed but heimdahl will parse them anyway
+   */
+  SwitchCase[] cases;
+
+  
+  /**
+   *
+   * @note  null not allowed but heimdahl will parse them anyway
+   */
+  Expression others;
+}
+
+IfExpression extends BranchingExpression {
+  Expression guard;
+
+  
+  /**
+   * then branch
+   */
+  Expression tb;
+
+  
+  /**
+   * else branch; can be null
+   */
+  Expression eb;
+}
+
+BreakExpression extends BranchingExpression {
+  
+  /**
+   * null iff void is returned
+   */
+  Expression result;
+}
+
+ThrowExpression extends BranchingExpression {
+  
+  /**
+   * the expression to be thrown
+   */
+  Expression target;
+}
+
+ReturnExpression extends BranchingExpression {
+  
+  /**
+   * null iff void is returned
+   */
+  Expression result;
+}
+
+ContinueExpression extends BranchingExpression {
+  
+  /**
+   * null iff void is returned
+   */
+  Expression result;
+}
+
+
+/**
+ * Within the bodies of these entities, using a break or continue is allowed.
+ */
+@abstract
+BreakContinueTarget extends BranchingExpression {
+  Expression body;
+}
+
+WhileLoop extends BreakContinueTarget {
+  Expression guard;
+}
+
+DoWhileLoop extends BreakContinueTarget {
+  Expression guard;
+}
+
+OperatorApplication extends Expression {
+  Expression[] targets;
+}
+
+
+/**
+ * An explicit super destructor call.
+ * @note  Heimdahl will rewrite the parse tree and insert empty ctArgs and
+ * rtArgs if required.
+ * @note  Bifröst will check that this happens within a destructor and targets a
+ * direct super type.
+ */
+SuperDestructorCall extends Expression {
+  Expression target;
+}
+
+
+/**
+ * An explicit super constructor call.
+ * @note  Heimdahl will rewrite the parse tree and insert empty ctArgs and
+ * rtArgs if required.
+ * @note  Bifröst will check that this happens within a constructor and targets
+ * a direct super type.
+ */
+SuperConstructorCall extends Expression {
+  
+  /**
+   * the expression yielding the type to be instantiated
+   */
+  Expression target;
+
+  
+  /**
+   * first CT args
+   */
+  Parameter[] first;
+
+  
+  /**
+   * second CT args
+   */
+  Parameter[] second;
+
+  
+  /**
+   * RT args
+   */
+  Parameter[] args;
+}
+
+
+/**
+ * An if case of a switch expression
+ * @note  this is simply a node within the SwitchExpression as it is required as
+ * node during IR generation but will not result itself in any IR entity
+ */
+SwitchCase extends Node {
+  
+  /**
+   * multiple labels will be represented as a list here
+   */
+  Expression[] labels;
+
+  Expression body;
+  view Node.parent
+  as SwitchLike parent;
+}
+
+TypeMember extends Node with NamedMember {
+  DocComment doc;
+
+  Visibility visibility;
+}
+
+
+/**
+ * A test definition.
+ * @note  tests must always have default visibility
+ */
+Test extends TypeMember {
+  string category;
+
+  string[] categoryParams;
+
+  Block body;
+}
+
+
+/**
+ * A field definition.
+ */
+Field extends TypeMember with WithMemberProperties {
+  Storage storage;
+
+  Kind kind;
+
+  Expression typ;
+
+  Expression init;
+
+  Expression extern;
+}
+
+
+/**
+ * A function definition.
+ */
+Function extends TypeMember with WithMemberProperties {
+  Kind kind;
+
+  
+  /**
+   *
+   * @note  null if none have been defined
+   */
+  FormalCTParameter[] CTParams;
+
+  
+  /**
+   *
+   * @note  empty if none have been defined
+   */
+  FormalParameter[] RTParams;
+
+  Expression returnType;
+
+  FunctionRealization realization;
+}
+
+
+/**
+ * The destructor of a type.
+ * @note  the name of a constructor is always delete.
+ * @note  there is at most one destructor in a valid TopLevelNode
+ */
+Destructor extends TypeMember with WithMemberProperties {
+  Block body;
+}
+
+
+/**
+ * A constructor of a type.
+ * @note  the name of a constructor is always new.
+ */
+Constructor extends TypeMember with WithMemberProperties {
+  FormalCTParameter[] CTParams;
+
+  ConstructorParameter[] RTParams;
+
+  Block body;
+}
+
+
+/**
+ * Global destructors destruct the type.
+ * @note  conceptually, they cannot be called. But they are materialized as a
+ * function "delete" like destructors and behave like them. The signatures
+ * cannot overlap as global destrocturs cannot define parameters.
+ */
+GlobalDestructor extends TypeMember with WithMemberProperties {
+  
+  /**
+   * Class destructors have the class as implicit parameter; type destructors
+   * take no parameter.
+   */
+  bool isClass;
+
+  Block body;
+}
+
+
+/**
+ * Global initializers construct the type.
+ * @note  conceptually, they cannot be called. But they are materialized as a
+ * function "new" like constructors and behave like them. The signatures cannot
+ * overlap as global initializers cannot define parameters.
+ */
+GlobalInitializer extends TypeMember with WithMemberProperties {
+  
+  /**
+   * Class initializers have the class as implicit parameter; type initializers
+   * take no parameter.
+   */
+  bool isClass;
+
+  Block body;
+}
+
+
+/**
+ * An enum instance is a node holding a name and an optional initializer.
+ */
+EnumInstance extends Node with NamedMember {
+  Expression initializer;
+}
+
+
+/**
+ * Definitions that can appear at top level.
+ */
+TopLevelNode extends Node with NamedMember with Scope {
+  DocComment doc;
+
+  Visibility visibility;
+}
+
+
+/**
+ *
+ * @note  AliasDef must never receive formal parameters. Because, this would
+ * introduce type-level lambdas. This, in turn, is a serious issue for almost
+ * anything going on in the bifröst phase.
+ */
+AliasDef extends TopLevelNode {
+  
+  /**
+   * The expression must yield a type.
+   */
+  Expression target;
+}
+
+
+/**
+ * A type definition that has formals and super types.
+ */
+TypeLike extends TopLevelNode {
+  
+  /**
+   * Formal parameters of this type.
+   * @note  null if none have been defined
+   */
+  FormalCTParameter[] params;
+
+  
+  /**
+   * Super types and properties of this type.
+   */
+  Expression[] extensions;
+
+  
+  /**
+   * Imports visible in this type's body.
+   * @note  this is always null for properties atm. as they cannot have bodies
+   */
+  ImportExpression[] imports;
+}
+
+
+/**
+ * An enum definition
+ */
+EnumDef extends TypeLike {
+  EnumInstance[] instances;
+}
+
+
+/**
+ * The definition of a property.
+ * @note  Properties have no members.
+ */
+PropertyDef extends TypeLike {
+}
+
+
+/**
+ * The definition of an enum union.
+ */
+EnumUnionDef extends TypeLike {
+  
+  /**
+   * Holds all cases. Source locations can be taken from expressions.
+   */
+  map<StaticAccess, Expression> cases;
+
+  
+  /**
+   * Holds the else case. Can be null in which case it is void.
+   */
+  Expression others;
+}
+
+TypeWithMembers extends TypeLike {
+  
+  /**
+   * if true, the definition was a flat definition that covers the entire file
+   */
+  bool flat;
+
+  TypeMember[] members;
+}
+
+
+/**
+ * The definition of a type.
+ */
+TypeDef extends TypeWithMembers {
+}
+
+
+/**
+ * The definition of a class.
+ */
+ClassDef extends TypeWithMembers {
+}
+
+
+/**
+ * The definition of an interface.
+ */
+InterfaceDef extends TypeWithMembers {
+}
+
+
+/**
+ * The declaration of a parameter.
+ */
+FormalParameter extends Node with NamedMember {
+  
+  /**
+   * true for variable argument list parameters
+   */
+  bool varArg;
+
+  
+  /**
+   * The declared type of the parameter.
+   */
+  Expression typ;
+
+  
+  /**
+   * Properties of this parameter.
+   * @note  null if none have been provided
+   */
+  Expression[] properties;
+
+  
+  /**
+   * The default value of the parameter used if no value is supplied on call.
+   * @note  null, iff no default is defined.
+   */
+  Expression default;
+}
+
+
+/**
+ * A formal CT parameter can be variant and may have a raw value.
+ */
+FormalCTParameter extends FormalParameter {
+  
+  /**
+   * invariant if not present
+   */
+  Variance variance;
+
+  
+  /**
+   * null if not present
+   */
+  Expression raw;
+}
+
+
+/**
+ * Formal parameters of constructors may additionally define a field to be
+ * initialized.
+ */
+ConstructorParameter extends FormalParameter {
+  
+  /**
+   * Name of the field to be initialized from the formal parameter.
+   */
+  string initializes;
+}
+
+@abstract
+FunctionRealization extends Node {
+}
+
+
+/**
+ * Realization by definition of a body.
+ */
+FunctionBody extends FunctionRealization {
+  Expression body;
+}
+
+
+/**
+ * Realization by a C function loaded from a shared object.
+ */
+ExternFunction extends FunctionRealization {
+  Expression source;
+}
+
+
+/**
+ * Abstract functions are functions without implementations. Native functions
+ * are also realized by abstract functions.
+ */
+@singleton
+AbstractFunction extends FunctionRealization {
+}
+
+
+/**
+ * Realization by placing another function into this function.
+ */
+FunctionAssignment extends FunctionRealization {
+  Expression source;
+}
+
+
+/**
+ * A paragraph is a list of words.
+ * @note  Here, any non-whitespace character sequence counts as word.
+ */
+DocTag {
+  
+  /**
+   * the first word after the @
+   */
+  string name;
+
+  
+  /**
+   * words thereafter until the first double blank
+   */
+  string[] words;
+
+  
+  /**
+   * all words after the first double blank until the next tag
+   */
+  DocParagraph[] content;
+}
+
+
+/**
+ * A compiler message that is neither expected nor suppressed.
+ */
+Message {
+  
+  /**
+   * category name
+   */
+  string category;
+
+  
+  /**
+   * actual severity
+   */
+  Severity severity;
+
+  
+  /**
+   * position of the message
+   */
+  Position pos;
+
+  
+  /**
+   * text of the message including notes
+   */
+  string text;
+}
+
+
+/**
+ * Tyr comes in packages.
+ * @author  Timm Felden
+ */
+@singleton
+Package {
+  
+  /**
+   * name separated by dots to achieve some compression
+   */
+  string[] name;
+
+  
+  /**
+   * The global root scope as seen from this packages perspective.
+   */
+  Namespace root;
+
+  
+  /**
+   * The root scope of this package, i.e. the package denoted by name.
+   */
+  Namespace packageRoot;
+}
+
+
+/**
+ * A position inside a file.
+ * @author  Timm Felden
+ */
+Position {
+  File file;
+
+  v64 beginLine;
+
+  v64 beginColumn;
+
+  v64 endLine;
+
+  v64 endColumn;
+}
+
+@abstract
+Visibility {
+}
+
+
+/**
+ * Entities with this visibility can be accessed from everywhere.
+ */
+@singleton
+PublicVisible extends Visibility {
+}
+
+
+/**
+ * Entities with this visibility can be accessed from inside the same package.
+ */
+@singleton
+PackageVisible extends Visibility {
+}
+
+
+/**
+ * Override visibility. Overrides cannot change the visibility of an entity. On
+ * conflict, public will be chosen iff one target is public. On conflict, the
+ * largest common visibility will be chosen.
+ * @note  Increasing visibility on conflict is not an issue, as visibility
+ * cannot be used for security anyway. Also, access via the increased visibility
+ * is only granted if the precise type is known, i.e. there is no general
+ * removal of visibility of a super type.
+ * @note  It does not make sense to reduce the visibility for an overridden
+ * entity as it would not reduce the access to it.
+ */
+OverrideVisible extends Visibility {
+  
+  /**
+   * targets can be set explicitly and is null otherwise
+   */
+  Expression[] targets;
+}
+
+
+/**
+ * An entity that holds procted or private restrictions.
+ * @note  this is an AST, hence we do not resolve the semantics from missing CT
+ * args
+ * @note  If not CT args are provided, the parent of the restricted entity is
+ * chosen. Surprisingly, this is always what one wants.
+ * @inv  isProtected | isPrivate
+ */
+RestrictedVisible extends Visibility {
+  bool isProtected;
+
+  Expression protected;
+
+  bool isPrivate;
+
+  Expression private;
+}
+
+
+/**
+ * A paragraph is a list of words.
+ * @note  Here, any non-whitespace character sequence counts as word.
+ */
+DocParagraph {
+  string[] words;
+}
+
+interface ScopeMember extends Node {
+}
+
+
+/**
+ * Any node that may hold a scope member.
+ */
+interface Scope extends Node with ScopeMember {
+  
+  /**
+   * declarations in this scope
+   */
+  auto ScopeMember[] declarations;
+}
+
+interface NamedMember extends Node with ScopeMember {
+  string name;
+}
+
+interface WithMemberProperties extends TypeMember {
+  
+  /**
+   *
+   * @note  null if none have been defined
+   */
+  Expression[] properties;
+}
+
