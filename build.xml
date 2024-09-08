@@ -1,0 +1,100 @@
+<project name="toolingSDK" basedir="." default="main" xmlns:jacoco="antlib:org.jacoco.ant">
+
+	<property name="src.dir" value="src" />
+
+	<property name="build.dir" value="build" />
+	<property name="classes.dir" value="${build.dir}/classes" />
+	<property name="jar.dir" value="${build.dir}/jar" />
+
+	<path id="build.cp">
+		<fileset dir="lib" includes="*.jar" />
+	</path>
+
+	<path id="test.cp">
+		<fileset dir="lib" includes="*.jar" />
+
+		<pathelement path="${classes.dir}" />
+	</path>
+
+
+	<taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml">
+		<classpath>
+			<pathelement path="build-deps/org.jacoco.core-0.8.12.202403310830.jar" />
+			<pathelement path="build-deps/org.jacoco.report-0.8.12.202403310830.jar" />
+			<pathelement path="build-deps/org.jacoco.agent-0.8.12.202403310830.jar" />
+			<pathelement path="build-deps/org.jacoco.ant-0.8.12.202403310830.jar" />
+		</classpath>
+	</taskdef>
+	
+	
+	<target name="gen">
+		<java jar="ogss.jar" fork="true">
+			<arg value="build" />
+			<arg value="aast.skill" />
+			<arg value="-L" />
+			<arg value="java" />
+			<arg value="-Ojava:suppressWarnings=true" />
+			<arg value="-p" />
+			<arg value="tyr.tooling.sdk.ast" />
+			<arg value="-o" />
+			<arg value="gen-src" />
+			<arg value="-d" />
+			<arg value="lib" />
+			<arg value="--clean-mode" />
+			<arg value="wipe" />
+		</java>
+	</target>
+
+	<target name="clean">
+		<delete dir="${build.dir}" />
+		<!-- delete all module definitions because we want to create a fat jar -->
+		<delete>
+			<fileset dir="." includes="**/module-info.java" />
+		</delete>
+	</target>
+
+	<target name="compile">
+		<mkdir dir="${classes.dir}" />
+		<javac destdir="${classes.dir}" release="21" classpathref="build.cp" includeantruntime="false" debug="true">
+			<src path="src" />
+			<src path="gen-src" />
+		</javac>
+	</target>
+
+	<target name="jar" depends="compile">
+		<!-- create the jar -->
+		<mkdir dir="${jar.dir}" />
+		<jar destfile="${jar.dir}/${ant.project.name}.jar" basedir="${classes.dir}" compress="true" level="9">
+			<zipfileset includes="**/*.class" excludes="**/module-info.class" src="lib/ogss.common.jvm.jar" />
+			<zipfileset includes="**/*.class" excludes="**/module-info.class" src="lib/ogss.common.java.jar" />
+		</jar>
+	</target>
+
+	<target name="test" depends="compile">
+		<javac destdir="${classes.dir}" release="21" classpathref="test.cp" includeantruntime="false" debug="true">
+			<src path="test" />
+		</javac>
+	</target>
+
+	<target name="run-tests">
+		<jacoco:coverage>
+			<junit fork="true" forkmode="once">
+				<jvmarg value="-ea" />
+				<jvmarg value="-XX:+UseParallelGC" />
+				<jvmarg value="-Xms4G" />
+				<jvmarg value="-Xmx4G" />
+				<jvmarg value="-verbose:gc" />
+				<jvmarg value="-Xloggc:gc.log" />
+				<classpath refid="test.cp" />
+				<formatter type="plain" usefile="false" />
+				<formatter type="xml" />
+
+				<test name="**" />
+			</junit>
+		</jacoco:coverage>
+	</target>
+
+	<target name="clean-build" depends="gen,clean,jar" />
+
+	<target name="main" depends="gen,clean,test" />
+</project>
