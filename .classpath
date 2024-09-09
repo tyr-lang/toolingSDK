@@ -7,7 +7,15 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/ogss.common.java.jar"/>
-	<classpathentry kind="lib" path="lib/ogss.common.jvm.jar"/>
+	<classpathentry kind="lib" path="lib/ogss.common.java.jar">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/ogss.common.jvm.jar">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
