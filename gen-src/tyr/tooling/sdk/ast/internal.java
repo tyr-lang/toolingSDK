@@ -1,6 +1,6 @@
 /*   ____  _____________                                                                                              *\
  *  / __ \/ ___/ __/ __/  Your OGSS/Java Binding                                                                      * 
- * / /_/ / (_\_\ \_\ \    generated: 08.09.2024                                                                       * 
+ * / /_/ / (_\_\ \_\ \    Tyr Tooling SDK                                                                             * 
  * \____/\___/___/___/    by: feldentm                                                                                * 
 \*                                                                                                                    */
 package tyr.tooling.sdk.ast;
@@ -6523,13 +6523,13 @@ public static final class P7 extends Pool<tyr.tooling.sdk.ast.DocParagraph> {
             return (B)this;
         }
 
-        public final B finallyPos(tyr.tooling.sdk.ast.Position finallyPos) {
-            self.finallyPos = finallyPos;
+        public final B body(tyr.tooling.sdk.ast.Expression body) {
+            self.body = body;
             return (B)this;
         }
 
-        public final B body(tyr.tooling.sdk.ast.Expression body) {
-            self.body = body;
+        public final B finallyPos(tyr.tooling.sdk.ast.Position finallyPos) {
+            self.finallyPos = finallyPos;
             return (B)this;
         }
     }

@@ -42,6 +42,8 @@
 			<arg value="lib" />
 			<arg value="--clean-mode" />
 			<arg value="wipe" />
+			<arg value="-h2" />
+			<arg value="Tyr Tooling SDK" />
 		</java>
 	</target>
 
@@ -94,7 +96,9 @@
 		</jacoco:coverage>
 	</target>
 
-	<target name="clean-build" depends="gen,clean,jar" />
+	<target name="clean-build" depends="gen,clean,jar">
+        <move file="${jar.dir}/${ant.project.name}.jar" tofile="tyr.tooling.sdk.jar"/>
+	</target>
 
 	<target name="main" depends="gen,clean,test" />
 </project>
