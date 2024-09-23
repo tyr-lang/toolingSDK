@@ -34,6 +34,8 @@
 			<arg value="-L" />
 			<arg value="java" />
 			<arg value="-Ojava:suppressWarnings=true" />
+			<arg value="-v" />
+			<arg value="*" />
 			<arg value="-p" />
 			<arg value="tyr.tooling.sdk.ast" />
 			<arg value="-o" />
